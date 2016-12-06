@@ -58,10 +58,19 @@ func timeoutTask () {
 }
 
 func handler (w http.ResponseWriter, r *http.Request) {
+    // Parse out request
     urlParts := strings.Split(r.URL.Path, "/")
     streamName := urlParts[1]
     clientId := urlParts[2]
     lastTime := urlParts[3]
+    decoder := json.NewDecoder(r.Body)
+    var req StreamRequest   
+    err := decoder.Decode(&req)
+    if err != nil {
+        panic(err)
+    }
+    defer r.Body.Close()
+    
     now := time.Now().UnixNano() / 1000000
     
     // Get the stream
@@ -82,6 +91,7 @@ func handler (w http.ResponseWriter, r *http.Request) {
     defer activeStream.mutex.Unlock()
     activeStream.tick(now)
     activeStream.updateClients(now, clientId)
+    activeStream.applyEvents(req, clientId)
     activeStream.stream.MarkSent()
     
     // Return info
@@ -134,6 +144,18 @@ func (activeStream * ActiveStream) updateClients (now int64, clientId string) {
         activeStream.stream.Connect(clientId)
     }
     activeStream.clients[clientId] = now
+}
+
+func (activeStream * ActiveStream) applyEvents (req StreamRequest, clientId string) {
+    for i := range req.Events {
+        event := req.Events[i]
+        event.Origin = clientId
+        activeStream.stream.AddEvent(event)
+    }
+}
+
+type StreamRequest struct {
+    Events []model.Event
 }
 
 type StreamResponse struct {
