@@ -15,8 +15,6 @@ type EventStream struct {
     LastSentT int64
     T int64
     Events []Event
-    ProxyIds map[string]string
-    LastProxyId int64
 }
 
 func NewStream() (stream * EventStream) {
@@ -28,8 +26,6 @@ func NewStream() (stream * EventStream) {
         LastSentT: 0,
         T: 0,
         Events: make([]Event, 0),
-        ProxyIds: make(map[string]string),
-        LastProxyId: 0,
     }
     result.Restart()
     return result
@@ -42,7 +38,6 @@ func (stream * EventStream) Restart () {
     stream.LastSentT = 0
     stream.T = 0
     stream.Events = make([]Event, 0) 
-    stream.ProxyIds = make(map[string]string)
     stream.AddEvent(*NewEvent("_a", "_", strconv.FormatInt(rand.Int63(), 10)))
 }
 
@@ -56,17 +51,6 @@ func (stream * EventStream) AddEvent (event Event) {
     }
     event.SetTime(stream.LastSentT + 1)
     stream.Events = append(stream.Events, event)
-}
-
-func (stream * EventStream) GetProxyId (origin string) string {
-    val, ok := stream.ProxyIds[origin]
-    if (ok) {
-        return val
-    }
-    stream.LastProxyId += 1
-    newVal := strconv.FormatInt(stream.LastProxyId, 10)
-    stream.ProxyIds[origin] = newVal
-    return newVal
 }
 
 func (stream * EventStream) Tick (count int64) {
@@ -91,13 +75,11 @@ func (stream * EventStream) MarkSent () {
 }
 
 func (stream * EventStream) Disconnect (clientId string) {
-    proxyId := stream.GetProxyId(clientId)
-    stream.AddEvent(*NewEvent("_d", "_", proxyId))
+    stream.AddEvent(*NewEvent("_d", "_", clientId))
 }
 
 func (stream * EventStream) Connect (clientId string) {
-    proxyId := stream.GetProxyId(clientId)
-    stream.AddEvent(*NewEvent("_c", "_", proxyId))
+    stream.AddEvent(*NewEvent("_c", "_", clientId))
 }
 
 func (stream * EventStream) Serialize () (string, error) {
