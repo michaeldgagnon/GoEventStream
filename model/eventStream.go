@@ -17,8 +17,8 @@ type EventStream struct {
     Events []Event
 }
 
-func NewStream() (stream * EventStream) {
-    result := &EventStream{
+func NewEventStream() (stream EventStream) {
+    result := EventStream{
         StartTime: 0,
         EndTime: 0,
         StreamSeq: 0,

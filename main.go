@@ -72,9 +72,10 @@ func handler (w http.ResponseWriter, r *http.Request) {
     gameMutex.Unlock()
     
     // Process the stream
-    deltaEvents, proxyId := game.Process(now, clientId, lastKnownT, req.Events)
+    deltaEvents, deltaStates, proxyId := game.Process(now, clientId, lastKnownT, req.Events, req.State)
     rsp := &GameResponse{
         Events : deltaEvents,
+        States : deltaStates,
         ProxyId : proxyId,
     }
     js, _ := rsp.Serialize()
@@ -86,10 +87,12 @@ var gameMutex sync.Mutex
 
 type GameRequest struct {
     Events []model.Event
+    State map[string]string `json:"State,omitempty"`
 }
 
 type GameResponse struct {
     Events []model.Event
+    States []model.State
     ProxyId string
 }
 

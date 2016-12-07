@@ -20,10 +20,6 @@ func NewEvent(eventType string, origin string, body string) (event * Event) {
     }
 }
 
-func (event * Event) SetOrigin (origin string) {
-    event.Origin = origin
-}
-
 func (event * Event) SetTime (t int64) {
     event.T = t
 }

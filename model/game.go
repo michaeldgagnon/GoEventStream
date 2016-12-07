@@ -23,7 +23,8 @@ type Client struct {
 }
 
 type Game struct {
-    stream * EventStream
+    eventStream EventStream
+    stateStream StateStream
     lastTick int64
     clients map[string]*Client
     lastProxyId int64
@@ -32,7 +33,8 @@ type Game struct {
 
 func NewGame(now int64) (game * Game) {
     return &Game{
-        stream: NewStream(),
+        eventStream: NewEventStream(),
+        stateStream: NewStateStream(),
         lastTick : now,
         clients : make(map[string]*Client),
         lastProxyId: 0,
@@ -51,20 +53,24 @@ func (game * Game) getClient (now int64, clientId string) * Client {
         proxyId: strconv.FormatInt(game.lastProxyId, 10),
     }
     game.clients[clientId] = client
-    game.stream.Connect(client.proxyId)
+    game.eventStream.Connect(client.proxyId)
     return client
 }
 
-func (game * Game) Process (now int64, clientId string, lastKnownT int64, events []Event) ([]Event, string) {
+func (game * Game) Process (now int64, clientId string, lastKnownT int64, events []Event, state map[string]string) ([]Event, []State, string) {
     game.mutex.Lock()
     defer game.mutex.Unlock()
     game.tick(now)
     client := game.updateClients(now, clientId)
     game.applyEvents(events, client)
-    game.stream.MarkSent()
+    if (state != nil) {
+        game.applyState(state, client)
+    }
+    game.eventStream.MarkSent()
     
-    deltaEvents := game.stream.GetDeltaEvents(lastKnownT)
-    return deltaEvents, client.proxyId
+    deltaEvents := game.eventStream.GetDeltaEvents(lastKnownT)
+    deltaStates := game.stateStream.GetDeltaState(lastKnownT)
+    return deltaEvents, deltaStates, client.proxyId
 }
 
 func (game * Game) IsExpired (now int64) bool {
@@ -73,10 +79,11 @@ func (game * Game) IsExpired (now int64) bool {
 
 
 func (game * Game) tick (now int64) {
-    stream := game.stream
     elapsedTime := now - game.lastTick
     if (elapsedTime > STREAM_TICK_THRESHOLD_MS) {
-        stream.Tick(elapsedTime / STREAM_TICK_THRESHOLD_MS)
+        count := elapsedTime / STREAM_TICK_THRESHOLD_MS
+        game.eventStream.Tick(count)
+        game.stateStream.Tick(count)
         extra := elapsedTime % STREAM_TICK_THRESHOLD_MS
         game.lastTick = now - extra
     }
@@ -95,7 +102,8 @@ func (game * Game) updateClients (now int64, clientId string) * Client {
         id := expired[i]
         proxyId := game.clients[id].proxyId
         delete(game.clients, id)
-        game.stream.Disconnect(proxyId)
+        game.stateStream.Disconnect(proxyId)
+        game.eventStream.Disconnect(proxyId)
     }
     
     // Touch client
@@ -104,10 +112,14 @@ func (game * Game) updateClients (now int64, clientId string) * Client {
     return client
 }
 
+func (game * Game) applyState (data map[string]string, client * Client) {
+    game.stateStream.SetState(client.proxyId, data)
+}
+
 func (game * Game) applyEvents (events []Event, client * Client) {
     for i := range events {
         event := events[i]
         event.Origin = client.proxyId
-        game.stream.AddEvent(event)
+        game.eventStream.AddEvent(event)
     }
 }
