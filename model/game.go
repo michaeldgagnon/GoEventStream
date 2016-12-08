@@ -57,7 +57,7 @@ func (game * Game) getClient (now int64, clientId string) * Client {
     return client
 }
 
-func (game * Game) Process (now int64, clientId string, lastKnownT int64, events []Event, state map[string]string) ([]Event, []State, string) {
+func (game * Game) Process (now int64, clientId string, lastKnownT int64, events []Event, state map[string]string) (int64, []Event, []State, string) {
     game.mutex.Lock()
     defer game.mutex.Unlock()
     game.tick(now)
@@ -70,7 +70,7 @@ func (game * Game) Process (now int64, clientId string, lastKnownT int64, events
     
     deltaEvents := game.eventStream.GetDeltaEvents(lastKnownT)
     deltaStates := game.stateStream.GetDeltaState(lastKnownT)
-    return deltaEvents, deltaStates, client.proxyId
+    return game.eventStream.T, deltaEvents, deltaStates, client.proxyId
 }
 
 func (game * Game) IsExpired (now int64) bool {

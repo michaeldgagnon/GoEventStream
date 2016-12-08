@@ -72,8 +72,9 @@ func handler (w http.ResponseWriter, r *http.Request) {
     gameMutex.Unlock()
     
     // Process the stream
-    deltaEvents, deltaStates, proxyId := game.Process(now, clientId, lastKnownT, req.Events, req.State)
+    t, deltaEvents, deltaStates, proxyId := game.Process(now, clientId, lastKnownT, req.Events, req.State)
     rsp := &GameResponse{
+        T : t,
         Events : deltaEvents,
         States : deltaStates,
         ProxyId : proxyId,
@@ -91,6 +92,7 @@ type GameRequest struct {
 }
 
 type GameResponse struct {
+    T int64
     Events []model.Event
     States []model.State
     ProxyId string
