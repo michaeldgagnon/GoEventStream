@@ -13,7 +13,9 @@ Where 'foo' is the game name, 'me' is your unique client id, and '0' is your las
 - Events have a time, type, origin, and body. Time indicates the tick in which the event occurs. Type describes what the event is. Origin defines who created it ('_' for server generated). Body is an arbitrary string content.
 - The server always puts in initial event '_a' at time 0 with a random body. This is used to all clients to synchronize on the same random seed
 - Clients connect and disconnect from a stream at any time. Whenever a connection event happens, the server puts a connect '_c' or disconnect '_d' event into the stream at the current time 't' with a body set to the connecting client 'public id'
-- Clients post to URLs of the form <streamId>/<clientPrivateId>/<lastKnownTick>
+- Client connect events are considered to happen whenever the server encounters a private client id that it does not already know about
+- Client disconnect events are considered to happen whenever a known private client id is not heard from for 10 seconds
+- Clients post to URLs of the form [streamId]/[clientPrivateId]/[lastKnownTick]
 - The server response to all messages with the client's assigned 'public id', the current server tick, and the set of events that occur between the lastKnownTick and current server tick. The body must contain any events the client wishes to publish to the stream
 - Clients must never process their simulation past the last known 't' received from the server. If they ever reach that time, they must discontinue processing
 - Clients should strive for a tick rate of 20 ticks per second to minimzie the frequency of having to pause or catch up
