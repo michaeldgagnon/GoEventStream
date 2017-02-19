@@ -46,6 +46,14 @@ func timeoutTask () {
 }
 
 func handler (w http.ResponseWriter, r *http.Request) {
+    // Response headers
+    w.Header().Set("Access-Control-Allow-Origin", "*")
+    w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+    w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
+    if (r.Method == "OPTIONS") {
+        return
+    }
+    
     // Parse out request
     urlParts := strings.Split(r.URL.Path, "/")
     gameName := urlParts[1]
